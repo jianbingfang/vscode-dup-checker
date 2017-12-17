@@ -1,0 +1,55 @@
+{
+    "name": "dupchecker",
+    "displayName": "DupChecker",
+    "description": "check duplicate lines in file",
+    "version": "0.0.1",
+    "author": {
+        "name": "Jianbing Fang",
+        "email": "jianbingfang@gmail.com"
+    },
+    "publisher": "dupchecker",
+    "engines": {
+        "vscode": "^1.0.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "keywords": [
+        "dupchecker",
+        "dup",
+        "duplicate",
+        "duplicates",
+        "checker"
+    ],
+    "activationEvents": [
+        "onCommand:extension.checkDup",
+        "onCommand:extension.checkDupWithTrim"
+    ],
+    "main": "./extension",
+    "contributes": {
+        "commands": [
+            {
+                "command": "extension.checkDup",
+                "title": "Check Duplicates"
+            },
+            {
+                "command": "extension.checkDupWithTrim",
+                "title": "Check Duplicates With Trim Condition"
+            }
+        ]
+    },
+    "scripts": {
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "node ./node_modules/vscode/bin/test"
+    },
+    "devDependencies": {
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6",
+        "eslint": "^4.6.1",
+        "@types/node": "^7.0.43",
+        "@types/mocha": "^2.2.42"
+    },
+    "dependencies": {
+        "lodash": "^4.17.4"
+    }
+}
