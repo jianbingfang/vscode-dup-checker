@@ -7,7 +7,7 @@
         "url": "https://github.com/jianbingfang/vscode-dup-checker.git"
     },
     "homepage": "https://github.com/jianbingfang/vscode-dup-checker",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "author": {
         "name": "Jianbing Fang",
         "email": "jianbingfang@gmail.com"
@@ -28,7 +28,8 @@
     ],
     "activationEvents": [
         "onCommand:extension.checkDup",
-        "onCommand:extension.checkDupWithTrim"
+        "onCommand:extension.checkDupWithTrim",
+        "onCommand:extension.checkDupWithRegex"
     ],
     "main": "./extension",
     "contributes": {
@@ -40,6 +41,10 @@
             {
                 "command": "extension.checkDupWithTrim",
                 "title": "Check Duplicates With Trim Condition"
+            },
+            {
+                "command": "extension.checkDupWithRegex",
+                "title": "Check Duplicates With Regex Match"
             }
         ]
     },
