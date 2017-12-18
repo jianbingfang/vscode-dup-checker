@@ -2,12 +2,15 @@
     "name": "dupchecker",
     "displayName": "DupChecker",
     "description": "check duplicate lines in file",
+    "repository": {
+        "url": "https://github.com/jianbingfang/vscode-dup-checker"
+    },
     "version": "0.0.1",
     "author": {
         "name": "Jianbing Fang",
         "email": "jianbingfang@gmail.com"
     },
-    "publisher": "dupchecker",
+    "publisher": "jianbingfang",
     "engines": {
         "vscode": "^1.0.0"
     },
