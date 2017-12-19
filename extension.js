@@ -60,25 +60,38 @@ function activate(context) {
             const re = new RegExp(regex);
             if (!re) return vscode.window.showErrorMessage(`[Invalid Regex]: ${regex}`);
             lines = lines.map(line => {
-                const match = re.exec(line)
+                const match = re.exec(line);
                 return match ? match[match.length - 1] : '';
             })
         }
 
         lines = lines.filter(line => !_.isEmpty(line));
-        const dupLines = []
-        lines.forEach((line, i) => {
-            if (dupLines.indexOf(line) === -1 && lines.indexOf(line, i + 1) >= 0) {
-                dupLines.push(line)
+        const dupLines = [];
+        const dupLineNums = [];
+        for (let i = lines.length - 1; i > 0; i--) {
+            const line = lines[i];
+            if (lines.lastIndexOf(line, i - 1) >= 0) {
+                dupLineNums.push(i);
+                if (dupLines.indexOf(line) === -1) {
+                    dupLines.push(line);
+                }
             }
-        });
+        }
 
         const trimInfo = _.isEmpty(trimChars) ? '' : ` (trim: ${trimChars})`;
         const regexInfo = _.isEmpty(regex) ? '' : ` (regex: /${regex}/)`;
         output.clear();
         output.show();
-        output.appendLine(`${dupLines.length} duplicates found${trimInfo}${regexInfo}:`);
-        dupLines.forEach(line => output.appendLine(line));
+        output.appendLine(`${dupLines.length} duplicate items found${trimInfo}${regexInfo}:`);
+        dupLines.reverse().forEach(line => output.appendLine(line));
+
+        vscode.window.showInformationMessage(`${dupLines.length} duplicate items found, need dedup?`, 'Yes', 'No').then(select => {
+            if (select === 'Yes') {
+                vscode.window.activeTextEditor.edit(edit => {
+                    dupLineNums.forEach(lineNum => edit.delete(doc.lineAt(lineNum).range));
+                });
+            }
+        })
     }
 }
 exports.activate = activate;
