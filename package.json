@@ -24,6 +24,10 @@
         "dup",
         "duplicate",
         "duplicates",
+        "dedup",
+        "deduplicate",
+        "unique",
+        "distinct",
         "checker"
     ],
     "activationEvents": [
