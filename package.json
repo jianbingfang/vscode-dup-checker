@@ -23,10 +23,9 @@
         "dupchecker",
         "dup",
         "duplicate",
-        "duplicates",
         "dedup",
-        "deduplicate",
         "unique",
+        "deduplicate",
         "distinct",
         "checker"
     ],
