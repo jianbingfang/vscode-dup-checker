@@ -65,12 +65,11 @@ function activate(context) {
             })
         }
 
-        lines = lines.filter(line => !_.isEmpty(line));
         const dupLines = [];
         const dupLineNums = [];
         for (let i = lines.length - 1; i > 0; i--) {
             const line = lines[i];
-            if (lines.lastIndexOf(line, i - 1) >= 0) {
+            if (!_.isEmpty(line) && lines.lastIndexOf(line, i - 1) >= 0) {
                 dupLineNums.push(i);
                 if (dupLines.indexOf(line) === -1) {
                     dupLines.push(line);
