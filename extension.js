@@ -49,7 +49,11 @@ function activate(context) {
     function checkDup(trimChars, regex) {
         let doc = vscode.window.activeTextEditor.document;
         const text = doc.getText();
-        let lines = text.split('\r\n').map(line => line.trim());
+        let lines = [];
+        for (let i = 0; i < doc.lineCount; i++) {
+            const line = doc.lineAt(i).text;
+            lines.push(line.trim());
+        }
 
         if (!_.isEmpty(trimChars)) {
             lines = lines.map(line => _.trim(line, trimChars));
