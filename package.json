@@ -13,6 +13,7 @@
         "email": "jianbingfang@gmail.com"
     },
     "publisher": "jianbingfang",
+    "icon": "images/logo_128x128.png",
     "engines": {
         "vscode": "^1.0.0"
     },
