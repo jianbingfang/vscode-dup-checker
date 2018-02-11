@@ -48,12 +48,17 @@ function activate(context) {
 
     function checkDup(trimChars, regex) {
         let doc = vscode.window.activeTextEditor.document;
-        const text = doc.getText();
-        let lines = [];
-        for (let i = 0; i < doc.lineCount; i++) {
-            const line = doc.lineAt(i).text;
-            lines.push(line.trim());
+
+        let targetLineNumbers;
+        const selections = vscode.window.activeTextEditor.selections;
+        if (selections.length === 1 && selections[0].isEmpty) {
+            targetLineNumbers = _.range(doc.lineCount);
+        } else {
+            targetLineNumbers = _.sortedUniq(selections.map(selection => _.range(selection.start.line, selection.end.line + 1))
+                                                       .reduce((a, b) => a.concat(b)));
         }
+        
+        const lines = targetLineNumbers.map(num => doc.lineAt(num).text);
 
         if (!_.isEmpty(trimChars)) {
             lines = lines.map(line => _.trim(line, trimChars));
@@ -70,11 +75,11 @@ function activate(context) {
         }
 
         const dupLines = [];
-        const dupLineNums = [];
+        const dupLineNumbers = [];
         for (let i = lines.length - 1; i > 0; i--) {
             const line = lines[i];
             if (!_.isEmpty(line) && lines.lastIndexOf(line, i - 1) >= 0) {
-                dupLineNums.push(i);
+                dupLineNumbers.push(targetLineNumbers[i]);
                 if (dupLines.indexOf(line) === -1) {
                     dupLines.push(line);
                 }
@@ -85,13 +90,14 @@ function activate(context) {
         const regexInfo = _.isEmpty(regex) ? '' : ` (regex: /${regex}/)`;
         output.clear();
         output.show();
-        output.appendLine(`${dupLines.length} duplicate items found${trimInfo}${regexInfo}:`);
+        output.appendLine(`${dupLines.length} duplicate items found${trimInfo}${regexInfo} in ${targetLineNumbers.length} lines:`);
+        output.appendLine('---------------------');
         dupLines.reverse().forEach(line => output.appendLine(line));
 
         vscode.window.showInformationMessage(`${dupLines.length} duplicate items found, need dedup?`, 'Yes', 'No').then(select => {
             if (select === 'Yes') {
                 vscode.window.activeTextEditor.edit(edit => {
-                    dupLineNums.forEach(lineNum => edit.delete(doc.lineAt(lineNum).range));
+                    dupLineNumbers.forEach(lineNum => edit.delete(doc.lineAt(lineNum).range));
                 });
             }
         })
