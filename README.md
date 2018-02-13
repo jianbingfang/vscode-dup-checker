@@ -9,4 +9,15 @@
 - `Check Duplicates With Trim Condition`: Check duplicate lines in file (trim both empty and customer input characters)
 - `Check Duplicates With Regex Match`: Check duplicate lines in file using customer regex (trim empty characters and then compare regex matched string in each line)
 
-![feature X](images/demo.gif)
+## Use Case
+
+### Check Duplicates
+![feature X](images/demo1.gif)
+
+### Check Duplicates With Trim Condition
+![feature X](images/demo2.gif)
+
+### Check Duplicates With Regex Match
+![feature X](images/demo3.gif)
+
+DupChecker will use the **last match** if you have multiple groups in regex.
