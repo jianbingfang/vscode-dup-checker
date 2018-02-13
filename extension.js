@@ -58,7 +58,7 @@ function activate(context) {
                                                        .reduce((a, b) => a.concat(b)));
         }
         
-        const lines = targetLineNumbers.map(num => doc.lineAt(num).text);
+        let lines = targetLineNumbers.map(num => doc.lineAt(num).text);
 
         if (!_.isEmpty(trimChars)) {
             lines = lines.map(line => _.trim(line, trimChars));
