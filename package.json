@@ -1,7 +1,7 @@
 {
     "name": "dupchecker",
     "displayName": "DupChecker",
-    "description": "Check duplicate lines and dedup",
+    "description": "Check duplicate lines and remove them if you need",
     "repository": {
         "type": "git",
         "url": "https://github.com/jianbingfang/vscode-dup-checker.git"
