@@ -2,12 +2,22 @@
 
 ## Features
 
-**Check duplicate** lines in the file content and **dedup** if you need.
+**Check duplicate lines** in the file content or selection, and **remove them** if you need to keep the unique lines only.
 
-`ctrl+shift+p` Commands:
-- `Check Duplicates`: Check duplicate lines in file immediately (trim empty characters only)
-- `Check Duplicates With Trim Condition`: Check duplicate lines in file (trim both empty and customer input characters)
-- `Check Duplicates With Regex Match`: Check duplicate lines in file using customer regex (trim empty characters and then compare regex matched string in each line)
+### Multiple Check Modes
+Commands:
+- `Check Duplicates`: Check duplicate lines immediately.
+- `Check Duplicates With Trim Condition`: Trim customer input characters first (on both start and end).
+- `Check Duplicates With Regex Match`: Capture matched substrings with customer input regex first (DupChecker will use the **last match** if you have multiple groups in regex).
+
+### Configurations:
+```
+"dupchecker": {
+  "trimStart": true,      // trim starting whitespaces in each line, default: true
+  "trimEnd": true,        // trim ending whitespaces in each line, default: true
+  "ignoreCase": false     // ignore case when comparing lines, default: false
+}
+```
 
 ## Use Case
 
@@ -19,5 +29,3 @@
 
 ### Check Duplicates With Regex Match
 ![feature X](images/demo3.gif)
-
-DupChecker will use the **last match** if you have multiple groups in regex.
