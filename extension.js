@@ -57,8 +57,16 @@ function activate(context) {
             targetLineNumbers = _.sortedUniq(selections.map(selection => _.range(selection.start.line, selection.end.line + 1))
                                                        .reduce((a, b) => a.concat(b)));
         }
-        
+
         let lines = targetLineNumbers.map(num => doc.lineAt(num).text);
+
+        const config = vscode.workspace.getConfiguration('dupchecker');
+        const needTrimStart = !!config.get('trimStart', true);
+        const needTrimEnd = !!config.get('trimEnd', true);
+        const needIgnoreCase = !!config.get('ignoreCase', false);
+
+        if (needTrimStart) lines = lines.map(line => _.trimStart(line));
+        if (needTrimEnd) lines = lines.map(line => _.trimEnd(line));
 
         if (!_.isEmpty(trimChars)) {
             lines = lines.map(line => _.trim(line, trimChars));
@@ -77,21 +85,28 @@ function activate(context) {
         const dupLines = [];
         const dupLineNumbers = [];
         for (let i = lines.length - 1; i > 0; i--) {
-            const line = lines[i];
-            if (!_.isEmpty(line) && lines.lastIndexOf(line, i - 1) >= 0) {
+            const currentLine = lines[i];
+            const stringComparer = getStringComparer(currentLine, needIgnoreCase);
+            if (!_.isEmpty(currentLine) && _.findLastIndex(lines, stringComparer, i - 1) >= 0) {
                 dupLineNumbers.push(targetLineNumbers[i]);
-                if (dupLines.indexOf(line) === -1) {
-                    dupLines.push(line);
+                if (_.findIndex(dupLines, stringComparer) === -1) {
+                    dupLines.push(currentLine);
                 }
             }
         }
 
-        const trimInfo = _.isEmpty(trimChars) ? '' : ` (trim: ${trimChars})`;
-        const regexInfo = _.isEmpty(regex) ? '' : ` (regex: /${regex}/)`;
+        const configInfoList = [];
+        if(needTrimStart) configInfoList.push('trimStart');
+        if(needTrimEnd) configInfoList.push('trimEnd');
+        if(needIgnoreCase) configInfoList.push('ignoreCase');
+        if(!_.isEmpty(trimChars)) configInfoList.push(`trimChars: ${trimChars}`);
+        if(!_.isEmpty(regex)) configInfoList.push(`regex: /${regex}/`);
+
         output.clear();
         output.show();
-        output.appendLine(`${dupLines.length} duplicate items found${trimInfo}${regexInfo} in ${targetLineNumbers.length} lines:`);
-        output.appendLine('---------------------');
+        output.appendLine(configInfoList.map(info => `[${info}]`).join(' '));
+        output.appendLine(`${dupLines.length} duplicate items found in ${targetLineNumbers.length} lines:`);
+        output.appendLine('----------------------------------');
         dupLines.reverse().forEach(line => output.appendLine(line));
 
         vscode.window.showInformationMessage(`${dupLines.length} duplicate items found, need dedup?`, 'Yes', 'No').then(select => {
@@ -101,6 +116,12 @@ function activate(context) {
                 });
             }
         })
+    }
+
+    function getStringComparer(targetString, ignoreCase) {
+        return text => ignoreCase
+                     ? text.toLowerCase() === targetString.toLowerCase()
+                     : text === targetString
     }
 }
 exports.activate = activate;
