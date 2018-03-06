@@ -109,7 +109,7 @@ function activate(context) {
         output.appendLine('----------------------------------');
         dupLines.reverse().forEach(line => output.appendLine(line));
 
-        vscode.window.showInformationMessage(`${dupLines.length} duplicate items found, need dedup?`, 'Yes', 'No').then(select => {
+        vscode.window.showInformationMessage(`${dupLines.length} duplicate items found, need remove them?`, 'Yes', 'No').then(select => {
             if (select === 'Yes') {
                 vscode.window.activeTextEditor.edit(edit => {
                     dupLineNumbers.forEach(lineNum => edit.delete(doc.lineAt(lineNum).range));
