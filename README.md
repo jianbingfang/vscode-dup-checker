@@ -6,9 +6,9 @@
 
 ### Multiple Check Modes
 Commands:
-- `Check Duplicates`: Check duplicate lines immediately.
-- `Check Duplicates With Trim Condition`: Trim customer input characters first (on both start and end).
-- `Check Duplicates With Regex Match`: Capture matched substrings with customer input regex first (DupChecker will use the **last match** if you have multiple groups in regex).
+- `Check Duplicates`: check duplicate lines immediately.
+- `Check Duplicates With Trim Condition`: trim customer input characters first (on both start and end).
+- `Check Duplicates With Regex Match`: capture matched substrings with customer input regex first (DupChecker will use the **last match** if you have multiple groups in regex).
 
 ### Configurations:
 ```
