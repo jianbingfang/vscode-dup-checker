@@ -111,8 +111,13 @@ function activate(context) {
 
         vscode.window.showInformationMessage(`${dupLines.length} duplicate items found, need remove them?`, 'Yes', 'No').then(select => {
             if (select === 'Yes') {
+                const leaveEmptyLine = !!config.get('leaveEmptyLine', true);
                 vscode.window.activeTextEditor.edit(edit => {
-                    dupLineNumbers.forEach(lineNum => edit.delete(doc.lineAt(lineNum).range));
+                    dupLineNumbers.forEach(lineNum => {
+                        const line = doc.lineAt(lineNum)
+                        const range = leaveEmptyLine ? line.range : line.rangeIncludingLineBreak
+                        edit.delete(range)
+                    });
                 });
             }
         })
