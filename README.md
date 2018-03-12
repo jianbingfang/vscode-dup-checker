@@ -16,7 +16,7 @@ Commands:
   "trimStart": true,      // trim starting whitespaces in each line, default: true
   "trimEnd": true,        // trim ending whitespaces in each line, default: true
   "ignoreCase": false,    // ignore case when comparing lines, default: false
-  "leaveEmptyLine": true  // leave an empty line after removing duplicates if true, or delete whole line if false, default: true
+  "leaveEmptyLine": true  // leave an empty line after removing duplicates if true, or remove whole line(including line break) if false, default: true
 }
 ```
 
