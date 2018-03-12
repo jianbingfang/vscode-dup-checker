@@ -29,7 +29,7 @@ function activate(context) {
             prompt: 'Characters to trim'
         }).then(input => {
             if (input === undefined) return;
-            checkDup(input);
+            checkDup({ trimChars: input });
         })
     });
 
@@ -40,13 +40,17 @@ function activate(context) {
             prompt: 'RegExp to match and selet for each line'
         }).then(input => {
             if (input === undefined) return;
-            checkDup('', input);
+            input = _.trim(input.trim(), '/');
+            const re = new RegExp(input);
+            if (!re) return vscode.window.showErrorMessage(`[Invalid Regex]: ${param.regex}`);
+            checkDup({ regex: re });
         })
     });
 
     context.subscriptions.push(disposable);
 
-    function checkDup(trimChars, regex) {
+    function checkDup(param) {
+        param = param || {};
         let doc = vscode.window.activeTextEditor.document;
 
         let targetLineNumbers;
@@ -58,38 +62,28 @@ function activate(context) {
                                                        .reduce((a, b) => a.concat(b)));
         }
 
-        let lines = targetLineNumbers.map(num => doc.lineAt(num).text);
-
         const config = vscode.workspace.getConfiguration('dupchecker');
         const needTrimStart = !!config.get('trimStart', true);
         const needTrimEnd = !!config.get('trimEnd', true);
         const needIgnoreCase = !!config.get('ignoreCase', false);
 
-        if (needTrimStart) lines = lines.map(line => _.trimStart(line));
-        if (needTrimEnd) lines = lines.map(line => _.trimEnd(line));
+        const transformLine = getLineTransformer({
+            trimChars: param.trimChars,
+            regex: param.regex,
+            needTrimStart: needTrimStart,
+            needTrimEnd: needTrimEnd,
+            needIgnoreCase: needIgnoreCase
+        });
 
-        if (!_.isEmpty(trimChars)) {
-            lines = lines.map(line => _.trim(line, trimChars));
-        }
-
-        if (!_.isEmpty(regex)) {
-            regex = _.trim(regex, '/');
-            const re = new RegExp(regex);
-            if (!re) return vscode.window.showErrorMessage(`[Invalid Regex]: ${regex}`);
-            lines = lines.map(line => {
-                const match = re.exec(line);
-                return match ? match[match.length - 1] : '';
-            })
-        }
-
+        const lines = targetLineNumbers.map(num => doc.lineAt(num).text)
+                                       .map(text => transformLine(text));
         const dupLines = [];
         const dupLineNumbers = [];
         for (let i = lines.length - 1; i > 0; i--) {
             const currentLine = lines[i];
-            const stringComparer = getStringComparer(currentLine, needIgnoreCase);
-            if (!_.isEmpty(currentLine) && _.findLastIndex(lines, stringComparer, i - 1) >= 0) {
+            if (!_.isEmpty(currentLine) && lines.lastIndexOf(currentLine, i - 1) >= 0) {
                 dupLineNumbers.push(targetLineNumbers[i]);
-                if (_.findIndex(dupLines, stringComparer) === -1) {
+                if (dupLines.lastIndexOf(currentLine) === -1) {
                     dupLines.push(currentLine);
                 }
             }
@@ -99,8 +93,8 @@ function activate(context) {
         if(needTrimStart) configInfoList.push('trimStart');
         if(needTrimEnd) configInfoList.push('trimEnd');
         if(needIgnoreCase) configInfoList.push('ignoreCase');
-        if(!_.isEmpty(trimChars)) configInfoList.push(`trimChars: ${trimChars}`);
-        if(!_.isEmpty(regex)) configInfoList.push(`regex: /${regex}/`);
+        if(!_.isEmpty(param.trimChars)) configInfoList.push(`trimChars: ${param.trimChars}`);
+        if(!_.isEmpty(param.regex)) configInfoList.push(`regex: /${param.regex}/`);
 
         output.clear();
         output.show();
@@ -123,10 +117,21 @@ function activate(context) {
         })
     }
 
-    function getStringComparer(targetString, ignoreCase) {
-        return text => ignoreCase
-                     ? text.toLowerCase() === targetString.toLowerCase()
-                     : text === targetString
+    function getLineTransformer(config) {
+        config = config || {}
+        const funcs = []
+        if (config.needTrimStart) lines = funcs.push(_.trimStart);
+        if (config.needTrimEnd) lines = funcs.push(_.trimEnd);
+        if (!_.isEmpty(config.trimChars)) funcs.push(line => _.trim(line, config.trimChars));
+        if (_.isRegExp(config.regex)) {
+            funcs.push(line => {
+                const match = config.regex.exec(line);
+                return match ? match[match.length - 1] : '';
+            });
+        }
+
+        if (config.needIgnoreCase) lines = funcs.push(_.toLower);
+        return _.flow(funcs);
     }
 }
 exports.activate = activate;
