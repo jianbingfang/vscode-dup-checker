@@ -70,6 +70,7 @@ function activate (context) {
     const needTrimStart = !!config.get('trimStart', true)
     const needTrimEnd = !!config.get('trimEnd', true)
     const needIgnoreCase = !!config.get('ignoreCase', false)
+    const needRemoveAllDuplicates = !!config.get('removeAllDuplicates', false)
 
     const transformLine = getLineTransformer({
       trimChars: param.trimChars,
@@ -84,7 +85,7 @@ function activate (context) {
       .map(text => transformLine(text))
       .map(
         (line, i, array) =>
-          i > 0 && !_.isEmpty(line) && array.lastIndexOf(line, i - 1) >= 0
+          isDuplicate(array, i, line, needRemoveAllDuplicates)
             ? {
                 text: line,
                 index: targetLineNumbers[i]
@@ -114,33 +115,46 @@ function activate (context) {
       .showInformationMessage(`${dupLines.length} duplicate items found, need remove them?`, 'Yes', 'No')
       .then(select => {
         if (select === 'Yes') {
-          const leaveEmptyLine = !!config.get('leaveEmptyLine', true)
-          vscode.window.activeTextEditor.edit(edit => {
-            dupLineNumbers.forEach(lineNum => {
-              const line = doc.lineAt(lineNum)
-              const range = leaveEmptyLine ? line.range : line.rangeIncludingLineBreak
-              edit.delete(range)
-            })
-          })
+          removeDuplicates()
         }
       })
-  }
 
-  function getLineTransformer (config) {
-    config = config || {}
-    const funcs = []
-    if (config.needTrimStart) lines = funcs.push(_.trimStart)
-    if (config.needTrimEnd) lines = funcs.push(_.trimEnd)
-    if (!_.isEmpty(config.trimChars)) funcs.push(line => _.trim(line, config.trimChars))
-    if (_.isRegExp(config.regex)) {
-      funcs.push(line => {
-        const match = config.regex.exec(line)
-        return match ? match[match.length - 1] : ''
-      })
+    function getLineTransformer (cfg) {
+      cfg = cfg || {}
+      const funcs = []
+      if (cfg.needTrimStart) lines = funcs.push(_.trimStart)
+      if (cfg.needTrimEnd) lines = funcs.push(_.trimEnd)
+      if (!_.isEmpty(cfg.trimChars)) funcs.push(line => _.trim(line, cfg.trimChars))
+      if (_.isRegExp(cfg.regex)) {
+        funcs.push(line => {
+          const match = cfg.regex.exec(line)
+          return match ? match[match.length - 1] : ''
+        })
+      }
+
+      if (cfg.needIgnoreCase) lines = funcs.push(_.toLower)
+      return _.flow(funcs)
     }
 
-    if (config.needIgnoreCase) lines = funcs.push(_.toLower)
-    return _.flow(funcs)
+    function isDuplicate (array, i, line, includeFirst) {
+      array = array || []
+      line = line || array[i]
+      if (_.isEmpty(line)) return false
+      return includeFirst
+        ? array.indexOf(line, i + 1) >= 0 || (i > 0 && array.lastIndexOf(line, i - 1) >= 0)
+        : i > 0 && array.lastIndexOf(line, i - 1) >= 0
+    }
+
+    function removeDuplicates () {
+      const leaveEmptyLine = !!config.get('leaveEmptyLine', true)
+      vscode.window.activeTextEditor.edit(edit => {
+        dupLineNumbers.forEach(lineNum => {
+          const line = doc.lineAt(lineNum)
+          const range = leaveEmptyLine ? line.range : line.rangeIncludingLineBreak
+          edit.delete(range)
+        })
+      })
+    }
   }
 }
 exports.activate = activate

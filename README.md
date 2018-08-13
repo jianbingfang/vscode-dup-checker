@@ -13,10 +13,11 @@ Commands:
 ### Configurations:
 ```
 "dupchecker": {
-  "trimStart": true,      // trim starting whitespaces in each line, default: true
-  "trimEnd": true,        // trim ending whitespaces in each line, default: true
-  "ignoreCase": false,    // ignore case when comparing lines, default: false
-  "leaveEmptyLine": true  // leave an empty line after removing duplicates if true, or remove whole line(including line break) if false, default: true
+  "trimStart": true,            // trim starting whitespaces in each line, default: true
+  "trimEnd": true,              // trim ending whitespaces in each line, default: true
+  "ignoreCase": false,          // ignore case when comparing lines, default: false
+  "leaveEmptyLine": true,       // leave an empty line after removing duplicates if true, or remove whole line(including line break) if false, default: true
+  "removeAllDuplicates": false  // remove all duplicate lines including the first occurrence if true, default: false
 }
 ```
 
