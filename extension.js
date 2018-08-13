@@ -39,7 +39,7 @@ function activate (context) {
   disposable = vscode.commands.registerCommand('extension.checkDupWithRegex', function () {
     vscode.window
       .showInputBox({
-        prompt: 'RegExp to match and selet for each line'
+        prompt: 'RegExp to match and select for each line'
       })
       .then(input => {
         if (input === undefined) return
