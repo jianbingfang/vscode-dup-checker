@@ -4,6 +4,8 @@
 
 **Check duplicate lines** in the file content or selection, and **remove them** if you need to keep the unique lines only.
 
+UPDATE: Since v0.1.0 DupChecker used [cuckoo-filter](https://github.com/vijayee/cuckoo-filter) to speed up checking progress, and be able to handle big files with millions of lines.
+
 ### Multiple Check Modes
 Commands:
 - `Check Duplicates`: check duplicate lines immediately.
