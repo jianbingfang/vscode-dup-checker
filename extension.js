@@ -2,13 +2,15 @@
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode')
 const _ = require('lodash')
+const stringHash = require("string-hash")
+const { CuckooFilter } = require('cuckoo-filter')
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-function activate (context) {
+function activate(context) {
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
-  console.log('Congratulations, your extension "dupchecker" is now active!')
+  console.log('Congratulations, your extension "DupChecker" is now active!')
   const output = vscode.window.createOutputChannel('DupChecker')
 
   // The command has been defined in the package.json file
@@ -52,9 +54,20 @@ function activate (context) {
 
   context.subscriptions.push(disposable)
 
-  function checkDup (param) {
-    param = param || {}
+  async function checkDup(param) {
+    if (!vscode.window.activeTextEditor) {
+      vscode.window.showErrorMessage('vscode text editor is not active!')
+      return
+    }
+
     let doc = vscode.window.activeTextEditor.document
+
+    output.clear()
+    output.show()
+    output.appendLine('------------------ Prepare ------------------')
+
+    const begin = Date.now()
+    param = param || {}
 
     let targetLineNumbers
     const selections = vscode.window.activeTextEditor.selections
@@ -71,6 +84,12 @@ function activate (context) {
     const needTrimEnd = !!config.get('trimEnd', true)
     const needIgnoreCase = !!config.get('ignoreCase', false)
     const needRemoveAllDuplicates = !!config.get('removeAllDuplicates', false)
+    const bigFileLineLimit = config.get('bigFileLineLimit', 10000)
+    const isBigFile = targetLineNumbers.length > bigFileLineLimit
+
+    if (targetLineNumbers.length >= 100000) {
+      vscode.window.showInformationMessage(`DupChecker may take a while to check this big file(${targetLineNumbers.length.toLocaleString()} lines), please be patient ☕`)
+    }
 
     const transformLine = getLineTransformer({
       trimChars: param.trimChars,
@@ -80,22 +99,45 @@ function activate (context) {
       needIgnoreCase: needIgnoreCase
     })
 
-    const duplicates = targetLineNumbers
-      .map(num => doc.lineAt(num).text)
-      .map(text => transformLine(text))
-      .map(
-        (line, i, array) =>
-          isDuplicate(array, i, line, needRemoveAllDuplicates)
-            ? {
-                text: line,
-                index: targetLineNumbers[i]
-              }
-            : null
-      )
-      .filter(v => v !== null)
+    output.append('transforming lines...')
+    const transformBegin = Date.now()
+    const firstOccurrenceMap = {}
+    const transformedLines = targetLineNumbers.map((num, i) => {
+      const text = transformLine(doc.lineAt(num).text)
+      if (needRemoveAllDuplicates && firstOccurrenceMap[stringHash(text)] === undefined) {
+        firstOccurrenceMap[stringHash(text)] = i
+      }
+      return text
+    })
+    let targetLines
+    let cuckooFilter
+    if (isBigFile) {
+      targetLines = transformedLines
+      cuckooFilter = new CuckooFilter(Math.ceil(1.2 * targetLines.length), 4, 4)
+    } else {
+      targetLines = transformedLines.map(line => stringHash(line))
+    }
+    output.appendLine(` done (${(Date.now() - transformBegin) / 1000}s)`)
+
+    output.append('checking duplicates...')
+    const checkDupBegin = Date.now()
+    const duplicates = []
+    targetLines.forEach((line, i, array) => {
+      if (isDuplicate(line, i, array)) {
+        duplicates.push({
+          text: transformedLines[i],
+          index: i
+        })
+      }
+    })
+    output.appendLine(` done (${(Date.now() - checkDupBegin) / 1000}s)`)
 
     const dupLines = _.chain(duplicates).map(dup => dup.text).uniq().value()
-    const dupLineNumbers = _.chain(duplicates).map(dup => dup.index).value()
+    let firstOccurrence = []
+    if (needRemoveAllDuplicates) {
+      firstOccurrence = dupLines.map(line => firstOccurrenceMap[stringHash(line)]).filter(v => v >= 0)
+    }
+    const dupLineNumbers = _.chain(duplicates).map(dup => dup.index).value().concat(firstOccurrence)
 
     const configInfoList = []
     if (needTrimStart) configInfoList.push('trimStart')
@@ -104,48 +146,55 @@ function activate (context) {
     if (!_.isEmpty(param.trimChars)) configInfoList.push(`trimChars: ${param.trimChars}`)
     if (!_.isEmpty(param.regex)) configInfoList.push(`regex: /${param.regex}/`)
 
-    output.clear()
-    output.show()
+    const timeCost = (Date.now() - begin) / 1000
+    output.appendLine('------------------ Results ------------------')
     output.appendLine(configInfoList.map(info => `[${info}]`).join(' '))
-    output.appendLine(`${dupLines.length} duplicate items found in ${targetLineNumbers.length} lines:`)
-    output.appendLine('----------------------------------')
-    dupLines.forEach(line => output.appendLine(line))
+    output.appendLine(`>> ${dupLines.length} duplicate item${dupLines.length > 1 ? 's' : ''} found in ${targetLineNumbers.length.toLocaleString()} lines (${timeCost}s total):`)
+    if (dupLines.length > 0) {
+      dupLines.forEach(line => output.appendLine(line))
+    }
 
-    vscode.window
-      .showInformationMessage(`${dupLines.length} duplicate items found, need remove them?`, 'Yes', 'No')
-      .then(select => {
-        if (select === 'Yes') {
-          removeDuplicates()
-        }
-      })
+    if (cuckooFilter && !cuckooFilter.reliable && dupLines.length > 0) {
+      vscode.window.showWarningMessage('NOTE! There might be some unique items are wrongly detected as duplicates, please double check the results manually!')
+    }
 
-    function getLineTransformer (cfg) {
+    const select = await vscode.window.showInformationMessage(`${dupLines.length} duplicate items found in ${timeCost}s, need remove them?`, 'Yes', 'No')
+    if (select === 'Yes') {
+      removeDuplicates(dupLineNumbers)
+    }
+
+    function getLineTransformer(cfg) {
       cfg = cfg || {}
       const funcs = []
-      if (cfg.needTrimStart) lines = funcs.push(_.trimStart)
-      if (cfg.needTrimEnd) lines = funcs.push(_.trimEnd)
-      if (!_.isEmpty(cfg.trimChars)) funcs.push(line => _.trim(line, cfg.trimChars))
+      if (cfg.needTrimStart) { funcs.push(_.trimStart) }
+      if (cfg.needTrimEnd) { funcs.push(_.trimEnd) }
+      if (!_.isEmpty(cfg.trimChars)) { funcs.push(line => _.trim(line, cfg.trimChars)) }
       if (_.isRegExp(cfg.regex)) {
         funcs.push(line => {
           const match = cfg.regex.exec(line)
           return match ? match[match.length - 1] : ''
         })
       }
-
-      if (cfg.needIgnoreCase) lines = funcs.push(_.toLower)
+      if (cfg.needIgnoreCase) { funcs.push(_.toLower) }
       return _.flow(funcs)
     }
 
-    function isDuplicate (array, i, line, includeFirst) {
+    function isDuplicate(line, i, array) {
       array = array || []
       line = line || array[i]
-      if (_.isEmpty(line)) return false
-      return includeFirst
-        ? array.indexOf(line, i + 1) >= 0 || (i > 0 && array.lastIndexOf(line, i - 1) >= 0)
-        : i > 0 && array.lastIndexOf(line, i - 1) >= 0
+      if (!line) return false
+      if (cuckooFilter) {
+        const exist = cuckooFilter.contains(line)
+        if (!exist) {
+          cuckooFilter.add(line)
+        }
+        return exist
+      } else {
+        return i > 0 && array.lastIndexOf(line, i - 1) >= 0
+      }
     }
 
-    function removeDuplicates () {
+    function removeDuplicates(dupLineNumbers) {
       const leaveEmptyLine = !!config.get('leaveEmptyLine', true)
       vscode.window.activeTextEditor.edit(edit => {
         dupLineNumbers.forEach(lineNum => {
@@ -160,5 +209,5 @@ function activate (context) {
 exports.activate = activate
 
 // this method is called when your extension is deactivated
-function deactivate () {}
+function deactivate() { }
 exports.deactivate = deactivate
