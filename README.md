@@ -11,6 +11,11 @@ Commands:
 - `Check Duplicates With Regex Match`: capture matched substrings with customer input regex first (DupChecker will use the **last match** if you have multiple groups in regex).
 
 ### Configurations:
+
+In **Preferences -> settings**:
+![configurations](images/DupChecker-settings.png)
+
+Or in `settings.json`:
 ```
 "dupchecker": {
   "trimStart": true,            // trim starting whitespaces in each line, default: true

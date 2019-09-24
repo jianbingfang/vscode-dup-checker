@@ -62,8 +62,8 @@ function activate(context) {
 
     let doc = vscode.window.activeTextEditor.document
 
-    output.clear()
     output.show()
+    output.clear()
     output.appendLine('------------------ Prepare ------------------')
 
     const begin = Date.now()
@@ -84,10 +84,8 @@ function activate(context) {
     const needTrimEnd = !!config.get('trimEnd', true)
     const needIgnoreCase = !!config.get('ignoreCase', false)
     const needRemoveAllDuplicates = !!config.get('removeAllDuplicates', false)
-    const bigFileLineLimit = config.get('bigFileLineLimit', 10000)
-    const isBigFile = targetLineNumbers.length > bigFileLineLimit
 
-    if (targetLineNumbers.length >= 100000) {
+    if (targetLineNumbers.length >= 500000) {
       vscode.window.showInformationMessage(`DupChecker may take a while to check this big file(${targetLineNumbers.length.toLocaleString()} lines), please be patient ☕`)
     }
 
@@ -99,7 +97,7 @@ function activate(context) {
       needIgnoreCase: needIgnoreCase
     })
 
-    output.append('transforming lines...')
+    output.append('🔧transforming lines...')
     const transformBegin = Date.now()
     const firstOccurrenceMap = {}
     const transformedLines = targetLineNumbers.map((num, i) => {
@@ -109,23 +107,16 @@ function activate(context) {
       }
       return text
     })
-    let targetLines
-    let cuckooFilter
-    if (isBigFile) {
-      targetLines = transformedLines
-      cuckooFilter = new CuckooFilter(Math.ceil(1.2 * targetLines.length), 4, 4)
-    } else {
-      targetLines = transformedLines.map(line => stringHash(line))
-    }
+    const cuckooFilter = new CuckooFilter(Math.ceil(1.2 * transformedLines.length), 4, 4)
     output.appendLine(` done (${(Date.now() - transformBegin) / 1000}s)`)
 
-    output.append('checking duplicates...')
+    output.append('🔍checking duplicates...')
     const checkDupBegin = Date.now()
     const duplicates = []
-    targetLines.forEach((line, i, array) => {
+    transformedLines.forEach((line, i, array) => {
       if (isDuplicate(line, i, array)) {
         duplicates.push({
-          text: transformedLines[i],
+          text: line,
           index: i
         })
       }
@@ -148,19 +139,20 @@ function activate(context) {
 
     const timeCost = (Date.now() - begin) / 1000
     output.appendLine('------------------ Results ------------------')
-    output.appendLine(configInfoList.map(info => `[${info}]`).join(' '))
-    output.appendLine(`>> ${dupLines.length} duplicate item${dupLines.length > 1 ? 's' : ''} found in ${targetLineNumbers.length.toLocaleString()} lines (${timeCost}s total):`)
+    output.appendLine('⚙️' + configInfoList.map(info => `[${info}]`).join(' '))
+    if (!cuckooFilter.reliable && dupLines.length > 0) {
+      output.appendLine('⚠️There might be some unique items which are wrongly detected as duplicates, please double check the results manually!')
+      vscode.window.showWarningMessage('ATTENTION! There might be some unique items which are wrongly detected as duplicates, please double check the results manually!')
+    }
+    output.appendLine(`✅${dupLines.length} duplicate item${dupLines.length > 1 ? 's' : ''} found in ${targetLineNumbers.length.toLocaleString()} lines (${timeCost}s total):`)
     if (dupLines.length > 0) {
       dupLines.forEach(line => output.appendLine(line))
-    }
-
-    if (cuckooFilter && !cuckooFilter.reliable && dupLines.length > 0) {
-      vscode.window.showWarningMessage('NOTE! There might be some unique items are wrongly detected as duplicates, please double check the results manually!')
-    }
-
-    const select = await vscode.window.showInformationMessage(`${dupLines.length} duplicate items found in ${timeCost}s, need remove them?`, 'Yes', 'No')
-    if (select === 'Yes') {
-      removeDuplicates(dupLineNumbers)
+      const select = await vscode.window.showInformationMessage(`${dupLines.length} duplicate item${dupLines.length > 1 ? 's' : ''} found in ${timeCost}s, need remove them?`, 'Yes', 'No')
+      if (select === 'Yes') {
+        removeDuplicates(dupLineNumbers)
+      }
+    } else {
+      vscode.window.showInformationMessage(`${dupLines.length} duplicate item${dupLines.length > 1 ? 's' : ''} found in ${timeCost}s`, 'Got it!')
     }
 
     function getLineTransformer(cfg) {

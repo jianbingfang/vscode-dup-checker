@@ -1,14 +1,19 @@
 # Change Log
 
+## v0.1.0 - 2019/09/24
+- Use [cuckoo-filter](https://github.com/vijayee/cuckoo-filter) to speed up checking progress.
+- Support big file(up to millions of lines).
+- Enable configuration editing in vscode settings view.
+
 ## v0.0.9 - 2018/08/13
-- Add new configration `removeAllDuplicates` to support removing duplicates including the first occurrence.
+- Add new configuration `removeAllDuplicates` to support removing duplicates including the first occurrence.
 
 ## v0.0.8 - 2018/03/12
-- Add new configration `leaveEmptyLine` to support removing line break.
+- Add new configuration `leaveEmptyLine` to support removing line break.
 
 ## v0.0.7 - 2018/03/06
-- Add new configration `ignoreCase` to support case insensitive comparison.
-- Add new configration `trimStart` and `trimEnd` to support self configuration on leading and trailing whitespace triming.
+- Add new configuration `ignoreCase` to support case insensitive comparison.
+- Add new configuration `trimStart` and `trimEnd` to support self configuration on leading and trailing whitespace trimming.
 
 ## v0.0.6 - 2018/02/13
 - Support duplicate checking in text selection.
@@ -29,4 +34,4 @@
 ## v0.0.1 - 2017/12/17
 - Initial release.
 - Support duplicate lines checking in file.
-- Support customer input characters triming when comparing lines.
+- Support customer input characters trimming when comparing lines.

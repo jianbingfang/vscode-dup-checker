@@ -7,7 +7,7 @@
         "url": "https://github.com/jianbingfang/vscode-dup-checker.git"
     },
     "homepage": "https://github.com/jianbingfang/vscode-dup-checker",
-    "version": "0.0.9",
+    "version": "0.1.0",
     "author": {
         "name": "Jianbing Fang",
         "email": "jianbingfang@gmail.com"
@@ -50,7 +50,37 @@
                 "command": "extension.checkDupWithRegex",
                 "title": "Check Duplicates With Regex Match"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "DupChecker",
+            "properties": {
+                "dupchecker.trimStart": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "trim starting white spaces in each line, default: true"
+                },
+                "dupchecker.trimEnd": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "trim ending white spaces in each line, default: true"
+                },
+                "dupchecker.ignoreCase": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "ignore case when comparing lines, default: false"
+                },
+                "dupchecker.leaveEmptyLine": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "leave an empty line after removing duplicates if true, or remove whole line(including line break) if false, default: true"
+                },
+                "dupchecker.removeAllDuplicates": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "remove all duplicate lines including the first occurrence if true, default: false"
+                }
+            }
+        }
     },
     "bugs": {
         "url": "https://github.com/jianbingfang/vscode-dup-checker/issues",
@@ -61,13 +91,16 @@
         "test": "node ./node_modules/vscode/bin/test"
     },
     "devDependencies": {
-        "typescript": "^2.6.1",
-        "vscode": "^1.1.6",
-        "eslint": "^4.18.2",
+        "@types/mocha": "^2.2.42",
         "@types/node": "^7.0.43",
-        "@types/mocha": "^2.2.42"
+        "eslint": "^4.18.2",
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.36"
     },
     "dependencies": {
-        "lodash": "^4.17.13"
+        "cbor-js": "^0.1.0",
+        "cuckoo-filter": "^1.1.4",
+        "lodash": "^4.17.13",
+        "string-hash": "^1.1.3"
     }
 }
