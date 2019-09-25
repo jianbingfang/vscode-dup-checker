@@ -1,8 +1,12 @@
 # Change Log
 
+## v0.1.1 - 2019/09/25
+- Optimize memory usage.
+- Better information output.
+
 ## v0.1.0 - 2019/09/24
 - Use [cuckoo-filter](https://github.com/vijayee/cuckoo-filter) to speed up checking progress.
-- Support big file(up to millions of lines).
+- Support large file(up to hundreds of thousands of lines).
 - Enable configuration editing in vscode settings view.
 
 ## v0.0.9 - 2018/08/13

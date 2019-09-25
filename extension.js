@@ -19,7 +19,7 @@ function activate(context) {
   let disposable = vscode.commands.registerCommand('extension.checkDup', function () {
     // The code you place here will be executed every time your command is executed
     // Display a message box to the user
-    // vscode.window.showInformationMessage(`${dupLines.length} duplicates found.`);
+    // vscode.window.showInformationMessage(`${dupLines.size} duplicates found.`);
     checkDup()
   })
 
@@ -55,39 +55,52 @@ function activate(context) {
   context.subscriptions.push(disposable)
 
   async function checkDup(param) {
-    if (!vscode.window.activeTextEditor) {
-      vscode.window.showErrorMessage('vscode text editor is not active!')
+    param = param || {}
+    if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document) {
+      vscode.window.showErrorMessage('DupChecker: vscode text editor is not active!')
       return
     }
 
     let doc = vscode.window.activeTextEditor.document
+    const largeFileLineCount = 100000
 
     output.show()
     output.clear()
     output.appendLine('------------------ Prepare ------------------')
 
-    const begin = Date.now()
-    param = param || {}
+    let startLineNumber = 0
+    let endLineNumber = doc.lineCount
 
-    let targetLineNumbers
     const selections = vscode.window.activeTextEditor.selections
-    if (selections.length === 1 && selections[0].isEmpty) {
-      targetLineNumbers = _.range(doc.lineCount)
-    } else {
-      targetLineNumbers = _.sortedUniq(
-        selections.map(selection => _.range(selection.start.line, selection.end.line + 1)).reduce((a, b) => a.concat(b))
-      )
+    if (selections.length > 1) {
+      vscode.window.showWarningMessage('Oops! DupChecker cannot work with multiple selections... Please clear the selections or keep just only one!', 'Got it!')
+      return
     }
+    if (selections.length === 1 && !selections[0].isEmpty) {
+      startLineNumber = selections[0].start.line
+      endLineNumber = selections[0].end.line + 1
+    }
+    output.appendLine(`📄${doc.fileName}${startLineNumber !== 0 || endLineNumber !== doc.lineCount ? `:${startLineNumber + 1}-${endLineNumber}` : ''}`)
+    output.append('🔍checking duplicates...')
+    const totalLineCount = endLineNumber - startLineNumber
+    if (totalLineCount >= largeFileLineCount) {
+      vscode.window.showInformationMessage(
+        `DupChecker may take a while to deal with the large file(${doc.lineCount.toLocaleString()} lines), please be patient ☕`, 'Sure!')
+    }
+
+    await new Promise(resolve => {
+      setTimeout(() => {
+        resolve()
+      }, 0)
+    })
+
+    const beginTime = Date.now()
 
     const config = vscode.workspace.getConfiguration('dupchecker')
     const needTrimStart = !!config.get('trimStart', true)
     const needTrimEnd = !!config.get('trimEnd', true)
     const needIgnoreCase = !!config.get('ignoreCase', false)
     const needRemoveAllDuplicates = !!config.get('removeAllDuplicates', false)
-
-    if (targetLineNumbers.length >= 500000) {
-      vscode.window.showInformationMessage(`DupChecker may take a while to check this big file(${targetLineNumbers.length.toLocaleString()} lines), please be patient ☕`)
-    }
 
     const transformLine = getLineTransformer({
       trimChars: param.trimChars,
@@ -97,38 +110,36 @@ function activate(context) {
       needIgnoreCase: needIgnoreCase
     })
 
-    output.append('🔧transforming lines...')
-    const transformBegin = Date.now()
-    const firstOccurrenceMap = {}
-    const transformedLines = targetLineNumbers.map((num, i) => {
-      const text = transformLine(doc.lineAt(num).text)
-      if (needRemoveAllDuplicates && firstOccurrenceMap[stringHash(text)] === undefined) {
-        firstOccurrenceMap[stringHash(text)] = i
+    const cuckooFilterBucketSize = 2
+    const cuckooFilterBucketNum = Math.ceil((1.2 * totalLineCount) / cuckooFilterBucketSize * 2)
+    const cuckooFilterFingerprintSize = 3
+    console.debug(`building cuckoo filter: cfsize=${cuckooFilterBucketNum}, bsize=${cuckooFilterBucketSize}, fpsize=${cuckooFilterFingerprintSize}`)
+    const cuckooFilter = new CuckooFilter(cuckooFilterBucketNum, cuckooFilterBucketSize, cuckooFilterFingerprintSize)
+    console.debug(`cuckoo filter build finished, time cost: ${(Date.now() - beginTime) / 1000}s`)
+    const dupLines = new Set()
+    const dupLineNumbers = []
+    const firstOccurrenceMap = new Map()
+    for (let i = startLineNumber; i < endLineNumber; ++i) {
+      const line = transformLine(doc.lineAt(i).text)
+      if (isDuplicate(line)) {
+        dupLines.add(line)
+        dupLineNumbers.push(i)
       }
-      return text
-    })
-    const cuckooFilter = new CuckooFilter(Math.ceil(1.2 * transformedLines.length), 4, 4)
-    output.appendLine(` done (${(Date.now() - transformBegin) / 1000}s)`)
-
-    output.append('🔍checking duplicates...')
-    const checkDupBegin = Date.now()
-    const duplicates = []
-    transformedLines.forEach((line, i, array) => {
-      if (isDuplicate(line, i, array)) {
-        duplicates.push({
-          text: line,
-          index: i
-        })
+      if (needRemoveAllDuplicates) {
+        const hashCode = stringHash(line)
+        if (!firstOccurrenceMap.has(hashCode)) {
+          firstOccurrenceMap.set(hashCode, i)
+        }
       }
-    })
-    output.appendLine(` done (${(Date.now() - checkDupBegin) / 1000}s)`)
-
-    const dupLines = _.chain(duplicates).map(dup => dup.text).uniq().value()
-    let firstOccurrence = []
-    if (needRemoveAllDuplicates) {
-      firstOccurrence = dupLines.map(line => firstOccurrenceMap[stringHash(line)]).filter(v => v >= 0)
     }
-    const dupLineNumbers = _.chain(duplicates).map(dup => dup.index).value().concat(firstOccurrence)
+
+    const timeCost = (Date.now() - beginTime) / 1000
+    output.appendLine(` done (${timeCost}s)`)
+    await new Promise(resolve => {
+      setTimeout(() => {
+        resolve()
+      }, 0)
+    })
 
     const configInfoList = []
     if (needTrimStart) configInfoList.push('trimStart')
@@ -137,22 +148,30 @@ function activate(context) {
     if (!_.isEmpty(param.trimChars)) configInfoList.push(`trimChars: ${param.trimChars}`)
     if (!_.isEmpty(param.regex)) configInfoList.push(`regex: /${param.regex}/`)
 
-    const timeCost = (Date.now() - begin) / 1000
     output.appendLine('------------------ Results ------------------')
     output.appendLine('⚙️' + configInfoList.map(info => `[${info}]`).join(' '))
-    if (!cuckooFilter.reliable && dupLines.length > 0) {
+    if (!cuckooFilter.reliable && dupLines.size > 0) {
       output.appendLine('⚠️There might be some unique items which are wrongly detected as duplicates, please double check the results manually!')
       vscode.window.showWarningMessage('ATTENTION! There might be some unique items which are wrongly detected as duplicates, please double check the results manually!')
     }
-    output.appendLine(`✅${dupLines.length} duplicate item${dupLines.length > 1 ? 's' : ''} found in ${targetLineNumbers.length.toLocaleString()} lines (${timeCost}s total):`)
-    if (dupLines.length > 0) {
+    output.appendLine(`✅${dupLines.size} duplicate value${dupLines.size > 1 ? 's' : ''} found in ${totalLineCount.toLocaleString()} lines:`)
+    if (dupLines.size > 0) {
       dupLines.forEach(line => output.appendLine(line))
-      const select = await vscode.window.showInformationMessage(`${dupLines.length} duplicate item${dupLines.length > 1 ? 's' : ''} found in ${timeCost}s, need remove them?`, 'Yes', 'No')
+      const select = await vscode.window.showInformationMessage(`${dupLines.size} duplicate value${dupLines.size > 1 ? 's' : ''} found in ${timeCost}s, need remove them?`, 'Yes', 'No')
       if (select === 'Yes') {
-        removeDuplicates(dupLineNumbers)
+        if (needRemoveAllDuplicates) {
+          for (let dupLine of dupLines) {
+            const index = firstOccurrenceMap.get(stringHash(dupLine))
+            if (index >= 0) {
+              dupLineNumbers.push(index)
+            }
+          }
+        }
+        removeLines(dupLineNumbers)
+        vscode.window.showInformationMessage(`DupChecker: ${dupLineNumbers.length} duplicate line${dupLineNumbers.length > 1 ? 's' : ''} removed!`)
       }
     } else {
-      vscode.window.showInformationMessage(`${dupLines.length} duplicate item${dupLines.length > 1 ? 's' : ''} found in ${timeCost}s`, 'Got it!')
+      vscode.window.showInformationMessage(`DupChecker: 0 duplicate value found in ${timeCost}s`, 'Got it!')
     }
 
     function getLineTransformer(cfg) {
@@ -171,25 +190,19 @@ function activate(context) {
       return _.flow(funcs)
     }
 
-    function isDuplicate(line, i, array) {
-      array = array || []
-      line = line || array[i]
+    function isDuplicate(line) {
       if (!line) return false
-      if (cuckooFilter) {
-        const exist = cuckooFilter.contains(line)
-        if (!exist) {
-          cuckooFilter.add(line)
-        }
-        return exist
-      } else {
-        return i > 0 && array.lastIndexOf(line, i - 1) >= 0
+      const exist = cuckooFilter.contains(line)
+      if (!exist) {
+        cuckooFilter.add(line)
       }
+      return exist
     }
 
-    function removeDuplicates(dupLineNumbers) {
+    function removeLines(lineNumbers) {
       const leaveEmptyLine = !!config.get('leaveEmptyLine', true)
       vscode.window.activeTextEditor.edit(edit => {
-        dupLineNumbers.forEach(lineNum => {
+        _.sortedUniq(lineNumbers.sort((a, b) => a < b)).forEach(lineNum => {
           const line = doc.lineAt(lineNum)
           const range = leaveEmptyLine ? line.range : line.rangeIncludingLineBreak
           edit.delete(range)
