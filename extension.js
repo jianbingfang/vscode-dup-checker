@@ -19,54 +19,82 @@ function activate(context) {
   let disposable = vscode.commands.registerCommand('extension.checkDup', function () {
     // The code you place here will be executed every time your command is executed
     // Display a message box to the user
-    // vscode.window.showInformationMessage(`${dupLines.size} duplicates found.`);
-    checkDup()
-  })
-
-  context.subscriptions.push(disposable)
-
-  disposable = vscode.commands.registerCommand('extension.checkDupWithTrim', function () {
-    vscode.window
-      .showInputBox({
-        prompt: 'Characters to trim'
-      })
-      .then(input => {
-        if (input === undefined) return
-        checkDup({ trimChars: input })
-      })
-  })
-
-  context.subscriptions.push(disposable)
-
-  disposable = vscode.commands.registerCommand('extension.checkDupWithRegex', function () {
-    vscode.window
-      .showInputBox({
-        prompt: 'RegExp to match and select for each line'
-      })
-      .then(input => {
-        if (input === undefined) return
-        input = _.trim(input.trim(), '/')
-        const re = new RegExp(input)
-        if (!re) return vscode.window.showErrorMessage(`[Invalid Regex]: ${param.regex}`)
-        checkDup({ regex: re })
-      })
-  })
-
-  context.subscriptions.push(disposable)
-
-  async function checkDup(param) {
-    param = param || {}
     if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document) {
       vscode.window.showErrorMessage('DupChecker: vscode text editor is not active!')
       return
     }
+    output.clear()
+    checkDup(vscode.window.activeTextEditor.document)
+  })
 
-    let doc = vscode.window.activeTextEditor.document
+  context.subscriptions.push(disposable)
+
+  disposable = vscode.commands.registerCommand('extension.checkDupWithTrim', async function () {
+    const input = await vscode.window.showInputBox({
+      prompt: 'Characters to trim'
+    })
+    if (input === undefined) return
+    if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document) {
+      vscode.window.showErrorMessage('DupChecker: vscode text editor is not active!')
+      return
+    }
+    output.clear()
+    checkDup(vscode.window.activeTextEditor.document, { trimChars: input })
+  })
+
+  context.subscriptions.push(disposable)
+
+  disposable = vscode.commands.registerCommand('extension.checkDupWithRegex', async function () {
+    const input = await vscode.window.showInputBox({
+      prompt: 'RegExp to match and select for each line'
+    })
+    if (input === undefined) return
+    input = _.trim(input.trim(), '/')
+    const re = new RegExp(input)
+    if (!re) return vscode.window.showErrorMessage(`[Invalid Regex]: ${param.regex}`)
+    if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document) {
+      vscode.window.showErrorMessage('DupChecker: vscode text editor is not active!')
+      return
+    }
+    output.clear()
+    checkDup(vscode.window.activeTextEditor.document, { regex: re })
+  })
+
+  context.subscriptions.push(disposable)
+
+  disposable = vscode.commands.registerCommand('extension.checkDupForAllFiles', async function () {
+    const config = vscode.workspace.getConfiguration('dupchecker')
+    const includes = config.get('checkAllFilesInclude', '*')
+    const excludes = config.get('checkAllFilesExclude', '')
+    const limit = config.get('checkAllFilesNumLimit', 100)
+    const files = await vscode.workspace.findFiles(includes, excludes, limit)
+    if (files.length === 0) {
+      return vscode.window.showInformationMessage('DupChecker: no file found in workspace :(');
+    }
+    if (files.length > 10) {
+      const select = await vscode.window.showInformationMessage(`Check duplicates for all ${files.length} files in workspace?`, 'Yes', 'No')
+      if (select !== 'Yes') return
+    }
+    output.clear()
+    const beginTime = Date.now()
+    let count = 1
+    for (const file of files) {
+      const doc = await vscode.workspace.openTextDocument(file)
+      await checkDup(doc, { skipRemoveStage: true, progressInfo: `${count}/${files.length} ` })
+      count++
+    }
+    const timeCost = (Date.now() - beginTime) / 1000
+    return vscode.window.showInformationMessage(`DupChecker: Checking ${files.length} file${files.length > 1 ? 's' : ''} finished in ${timeCost}s, please view the result in OUTPUT 😃`, 'Got it!');
+  })
+
+  context.subscriptions.push(disposable)
+
+  async function checkDup(doc, param) {
+    param = param || {}
     const largeFileLineCount = 100000
 
     output.show()
-    output.clear()
-    output.appendLine('------------------ Prepare ------------------')
+    output.appendLine(`------------------ Prepare ${param.progressInfo || ''}------------------`)
 
     let startLineNumber = 0
     let endLineNumber = doc.lineCount
@@ -110,6 +138,7 @@ function activate(context) {
       needIgnoreCase: needIgnoreCase
     })
 
+    // stage1: check duplicates
     const cuckooFilterBucketSize = 2
     const cuckooFilterBucketNum = Math.ceil((1.2 * totalLineCount) / cuckooFilterBucketSize * 2)
     const cuckooFilterFingerprintSize = 3
@@ -148,19 +177,22 @@ function activate(context) {
     if (!_.isEmpty(param.trimChars)) configInfoList.push(`trimChars: ${param.trimChars}`)
     if (!_.isEmpty(param.regex)) configInfoList.push(`regex: /${param.regex}/`)
 
-    output.appendLine('------------------ Results ------------------')
+    output.appendLine(`------------------ Results ${param.progressInfo || ''}------------------`)
     output.appendLine('⚙️' + configInfoList.map(info => `[${info}]`).join(' '))
     if (!cuckooFilter.reliable && dupLines.size > 0) {
       output.appendLine('⚠️There might be some unique items which are wrongly detected as duplicates, please double check the results manually!')
       vscode.window.showWarningMessage('ATTENTION! There might be some unique items which are wrongly detected as duplicates, please double check the results manually!')
     }
     output.appendLine(`✅${dupLines.size} duplicate value${dupLines.size > 1 ? 's' : ''} found in ${totalLineCount.toLocaleString()} lines:`)
+    dupLines.forEach(line => output.appendLine(line))
+
+    // stage2: ask user to remove duplicates
+    if (param.skipRemoveStage === true) return
     if (dupLines.size > 0) {
-      dupLines.forEach(line => output.appendLine(line))
-      const select = await vscode.window.showInformationMessage(`${dupLines.size} duplicate value${dupLines.size > 1 ? 's' : ''} found in ${timeCost}s, need remove them?`, 'Yes', 'No')
+      const select = await vscode.window.showInformationMessage(`DupChecker: ${dupLines.size} duplicate value${dupLines.size > 1 ? 's' : ''} found in ${timeCost}s, need remove them?`, 'Yes', 'No')
       if (select === 'Yes') {
         if (needRemoveAllDuplicates) {
-          for (let dupLine of dupLines) {
+          for (const dupLine of dupLines) {
             const index = firstOccurrenceMap.get(stringHash(dupLine))
             if (index >= 0) {
               dupLineNumbers.push(index)

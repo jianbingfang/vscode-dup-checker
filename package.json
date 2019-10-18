@@ -33,7 +33,8 @@
     "activationEvents": [
         "onCommand:extension.checkDup",
         "onCommand:extension.checkDupWithTrim",
-        "onCommand:extension.checkDupWithRegex"
+        "onCommand:extension.checkDupWithRegex",
+        "onCommand:extension.checkDupForAllFiles"
     ],
     "main": "./extension",
     "contributes": {
@@ -49,6 +50,10 @@
             {
                 "command": "extension.checkDupWithRegex",
                 "title": "Check Duplicates With Regex Match"
+            },
+            {
+                "command": "extension.checkDupForAllFiles",
+                "title": "Check Duplicates (For All Files)"
             }
         ],
         "configuration": {
@@ -78,6 +83,21 @@
                     "type": "boolean",
                     "default": false,
                     "description": "remove all duplicate lines including the first occurrence if true, default: false"
+                },
+                "dupchecker.checkAllFilesInclude": {
+                    "type": "string",
+                    "default": "*",
+                    "description": "GlobPattern for files to include in [Check Duplicates (For All Files)] mode"
+                },
+                "dupchecker.checkAllFilesExclude": {
+                    "type": "string",
+                    "default": "",
+                    "description": "GlobPattern for files to exclude in [Check Duplicates (For All Files)] mode"
+                },
+                "dupchecker.checkAllFilesNumLimit": {
+                    "type": "integer",
+                    "default": 100,
+                    "description": "Maximum number of files to include in [Check Duplicates (For All Files)] mode"
                 }
             }
         }
