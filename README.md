@@ -13,6 +13,7 @@ Commands:
 - `Check Duplicates`: check duplicate lines immediately.
 - `Check Duplicates With Trim Condition`: trim customer input characters first (on both start and end).
 - `Check Duplicates With Regex Match`: capture matched substrings with customer input regex first (DupChecker will use the **last match** if you have multiple groups in regex).
+- `Check Duplicates (For All Files)`: check duplicate lines for all files in workspace one by one.
 
 ### Configurations:
 
@@ -27,8 +28,12 @@ Or in `settings.json`:
   "ignoreCase": false,          // ignore case when comparing lines, default: false
   "leaveEmptyLine": true,       // leave an empty line after removing duplicates if true, or remove whole line(including line break) if false, default: true
   "removeAllDuplicates": false  // remove all duplicate lines including the first occurrence if true, default: false
+  "checkAllFilesInclude": "*"   // GlobPattern for files to include in [Check Duplicates (For All Files)] mode, default: "*"
+  "checkAllFilesExclude": ""    // GlobPattern for files to exclude in [Check Duplicates (For All Files)] mode, default: ""
+  "checkAllFilesNumLimit": 100  // Maximum number of files to include in [Check Duplicates (For All Files)] mode, default: 100
 }
 ```
+Learn [GlobPattern](https://code.visualstudio.com/api/references/vscode-api#GlobPattern).
 
 ## Use Case
 

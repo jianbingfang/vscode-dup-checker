@@ -1,5 +1,8 @@
 # Change Log
 
+## v0.1.2 - 2019/10/18
+- Support new check mode `Check Duplicates (For All Files)`.
+
 ## v0.1.1 - 2019/09/25
 - Optimize memory usage.
 - Better information output.
