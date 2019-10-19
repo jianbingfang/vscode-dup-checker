@@ -64,7 +64,7 @@ function activate(context) {
 
   disposable = vscode.commands.registerCommand('extension.checkDupForAllFiles', async function () {
     const config = vscode.workspace.getConfiguration('dupchecker')
-    const includes = config.get('checkAllFilesInclude', '*')
+    const includes = config.get('checkAllFilesInclude', '**')
     const excludes = config.get('checkAllFilesExclude', '')
     const limit = config.get('checkAllFilesNumLimit', 100)
     const files = await vscode.workspace.findFiles(includes, excludes, limit)

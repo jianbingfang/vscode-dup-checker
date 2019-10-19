@@ -28,12 +28,17 @@ Or in `settings.json`:
   "ignoreCase": false,          // ignore case when comparing lines, default: false
   "leaveEmptyLine": true,       // leave an empty line after removing duplicates if true, or remove whole line(including line break) if false, default: true
   "removeAllDuplicates": false  // remove all duplicate lines including the first occurrence if true, default: false
-  "checkAllFilesInclude": "*"   // GlobPattern for files to include in [Check Duplicates (For All Files)] mode, default: "*"
+  "checkAllFilesInclude": "**"   // GlobPattern for files to include in [Check Duplicates (For All Files)] mode, default: "**"
   "checkAllFilesExclude": ""    // GlobPattern for files to exclude in [Check Duplicates (For All Files)] mode, default: ""
   "checkAllFilesNumLimit": 100  // Maximum number of files to include in [Check Duplicates (For All Files)] mode, default: 100
 }
 ```
-Learn [GlobPattern](https://code.visualstudio.com/api/references/vscode-api#GlobPattern).
+
+#### GlobPattern
+Config `checkAllFilesInclude` and `checkAllFilesExclude` uses GlobPattern.
+e.g. `*` stands for all files under a folder(non-recursive), `**` stands for all files under a folder(recursive).
+
+Learn more syntax of [GlobPattern](https://code.visualstudio.com/api/references/vscode-api#GlobPattern).
 
 ## Use Case
 

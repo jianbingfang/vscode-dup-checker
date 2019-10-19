@@ -86,7 +86,7 @@
                 },
                 "dupchecker.checkAllFilesInclude": {
                     "type": "string",
-                    "default": "*",
+                    "default": "**",
                     "description": "GlobPattern for files to include in [Check Duplicates (For All Files)] mode"
                 },
                 "dupchecker.checkAllFilesExclude": {
