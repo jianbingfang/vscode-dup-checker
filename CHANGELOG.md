@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.1.3 - 2019/10/19
+- Change default value of config `checkAllFilesInclude` to `**`.
+- Fix bug of "remove duplicates" not working if lose focus on the file.
+
 ## v0.1.2 - 2019/10/18
 - Support new check mode `Check Duplicates (For All Files)`.
 
