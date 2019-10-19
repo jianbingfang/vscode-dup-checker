@@ -24,7 +24,7 @@ function activate(context) {
       return
     }
     output.clear()
-    checkDup(vscode.window.activeTextEditor.document)
+    checkDup()
   })
 
   context.subscriptions.push(disposable)
@@ -39,7 +39,7 @@ function activate(context) {
       return
     }
     output.clear()
-    checkDup(vscode.window.activeTextEditor.document, { trimChars: input })
+    checkDup({ trimChars: input })
   })
 
   context.subscriptions.push(disposable)
@@ -57,7 +57,7 @@ function activate(context) {
       return
     }
     output.clear()
-    checkDup(vscode.window.activeTextEditor.document, { regex: re })
+    checkDup({ regex: re })
   })
 
   context.subscriptions.push(disposable)
@@ -80,7 +80,7 @@ function activate(context) {
     let count = 1
     for (const file of files) {
       const doc = await vscode.workspace.openTextDocument(file)
-      await checkDup(doc, { skipRemoveStage: true, progressInfo: `${count}/${files.length} ` })
+      await checkDup({ skipRemoveStage: true, progressInfo: `${count}/${files.length} ` }, doc)
       count++
     }
     const timeCost = (Date.now() - beginTime) / 1000
@@ -89,7 +89,7 @@ function activate(context) {
 
   context.subscriptions.push(disposable)
 
-  async function checkDup(doc, param) {
+  async function checkDup(param, doc = vscode.window.activeTextEditor.document) {
     param = param || {}
     const largeFileLineCount = 100000
 
@@ -199,7 +199,7 @@ function activate(context) {
             }
           }
         }
-        removeLines(dupLineNumbers)
+        await removeLines(doc, dupLineNumbers)
         vscode.window.showInformationMessage(`DupChecker: ${dupLineNumbers.length} duplicate line${dupLineNumbers.length > 1 ? 's' : ''} removed!`)
       }
     } else {
@@ -231,9 +231,10 @@ function activate(context) {
       return exist
     }
 
-    function removeLines(lineNumbers) {
+    async function removeLines(doc, lineNumbers) {
       const leaveEmptyLine = !!config.get('leaveEmptyLine', true)
-      vscode.window.activeTextEditor.edit(edit => {
+      let editor = await vscode.window.showTextDocument(doc)
+      editor.edit(edit => {
         _.sortedUniq(lineNumbers.sort((a, b) => a < b)).forEach(lineNum => {
           const line = doc.lineAt(lineNum)
           const range = leaveEmptyLine ? line.range : line.rangeIncludingLineBreak
