@@ -19,10 +19,6 @@ function activate(context) {
   let disposable = vscode.commands.registerCommand('extension.checkDup', async function () {
     // The code you place here will be executed every time your command is executed
     // Display a message box to the user
-    if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document) {
-      vscode.window.showErrorMessage('DupChecker: vscode text editor is not active!')
-      return
-    }
     output.clear()
     await checkDup()
   })
@@ -34,10 +30,6 @@ function activate(context) {
       prompt: 'Characters to trim'
     })
     if (input === undefined) return
-    if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document) {
-      vscode.window.showErrorMessage('DupChecker: vscode text editor is not active!')
-      return
-    }
     output.clear()
     await checkDup({ trimChars: input })
   })
@@ -52,10 +44,6 @@ function activate(context) {
     input = _.trim(input.trim(), '/')
     const re = new RegExp(input)
     if (!re) return vscode.window.showErrorMessage(`[Invalid Regex]: ${param.regex}`)
-    if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document) {
-      vscode.window.showErrorMessage('DupChecker: vscode text editor is not active!')
-      return
-    }
     output.clear()
     await checkDup({ regex: re })
   })
@@ -89,7 +77,15 @@ function activate(context) {
 
   context.subscriptions.push(disposable)
 
-  async function checkDup(param, doc = vscode.window.activeTextEditor.document) {
+  async function checkDup(param, doc) {
+    if (!doc && vscode.window.activeTextEditor) {
+      doc = vscode.window.activeTextEditor.document
+    }
+    if (!doc) {
+      vscode.window.showErrorMessage('DupChecker: the specified document is unavailable!')
+      return
+    }
+
     param = param || {}
     const largeFileLineCount = 100000
 
