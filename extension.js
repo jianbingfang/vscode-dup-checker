@@ -16,7 +16,7 @@ function activate(context) {
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
-  let disposable = vscode.commands.registerCommand('extension.checkDup', function () {
+  let disposable = vscode.commands.registerCommand('extension.checkDup', async function () {
     // The code you place here will be executed every time your command is executed
     // Display a message box to the user
     if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document) {
@@ -24,7 +24,7 @@ function activate(context) {
       return
     }
     output.clear()
-    checkDup()
+    await checkDup()
   })
 
   context.subscriptions.push(disposable)
@@ -39,7 +39,7 @@ function activate(context) {
       return
     }
     output.clear()
-    checkDup({ trimChars: input })
+    await checkDup({ trimChars: input })
   })
 
   context.subscriptions.push(disposable)
@@ -57,7 +57,7 @@ function activate(context) {
       return
     }
     output.clear()
-    checkDup({ regex: re })
+    await checkDup({ regex: re })
   })
 
   context.subscriptions.push(disposable)
