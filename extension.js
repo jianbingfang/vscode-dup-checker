@@ -20,7 +20,13 @@ function activate(context) {
     // The code you place here will be executed every time your command is executed
     // Display a message box to the user
     output.clear()
-    await checkDup()
+    try {
+      await checkDup()
+    } catch (err) {
+      console.error(err)
+      vscode.window.showErrorMessage(err.message)
+      output.appendLine(`⛔️Checking error on ${uri.fsPath}: ${err.message}`)
+    }
   })
 
   context.subscriptions.push(disposable)
@@ -31,7 +37,13 @@ function activate(context) {
     })
     if (input === undefined) return
     output.clear()
-    await checkDup({ trimChars: input })
+    try {
+      await checkDup({ trimChars: input })
+    } catch (err) {
+      console.error(err)
+      vscode.window.showErrorMessage(err.message)
+      output.appendLine(`⛔️Checking error on ${uri.fsPath}: ${err.message}`)
+    }
   })
 
   context.subscriptions.push(disposable)
@@ -45,7 +57,13 @@ function activate(context) {
     const re = new RegExp(input)
     if (!re) return vscode.window.showErrorMessage(`[Invalid Regex]: ${param.regex}`)
     output.clear()
-    await checkDup({ regex: re })
+    try {
+      await checkDup({ regex: re })
+    } catch (err) {
+      console.error(err)
+      vscode.window.showErrorMessage(err.message)
+      output.appendLine(`⛔️Checking error on ${uri.fsPath}: ${err.message}`)
+    }
   })
 
   context.subscriptions.push(disposable)
@@ -60,15 +78,21 @@ function activate(context) {
       return vscode.window.showInformationMessage('DupChecker: no file found in workspace :(');
     }
     if (files.length > 10) {
-      const select = await vscode.window.showInformationMessage(`Check duplicates for all ${files.length} files in workspace?`, 'Yes', 'No')
+      const msg = `Check duplicates for all ${files.length} files in workspace?` + (files.length === limit ? `⚠️You have reached max file number limit: ${limit}` : '')
+      const select = await vscode.window.showInformationMessage(msg, 'Yes', 'No')
       if (select !== 'Yes') return
     }
     output.clear()
     const beginTime = Date.now()
     let count = 1
-    for (const file of files) {
-      const doc = await vscode.workspace.openTextDocument(file)
-      await checkDup({ skipRemoveStage: true, progressInfo: `${count}/${files.length} ` }, doc)
+    for (const uri of files) {
+      try {
+        await checkDup({ multipleFiles: true, progressInfo: `${count}/${files.length} ` }, uri)
+      } catch (err) {
+        console.error(err)
+        output.appendLine(`⛔️Checking error on ${uri.fsPath}: ${err.message}`)
+        return
+      }
       count++
     }
     const timeCost = (Date.now() - beginTime) / 1000
@@ -77,36 +101,55 @@ function activate(context) {
 
   context.subscriptions.push(disposable)
 
-  async function checkDup(param, doc) {
-    if (!doc && vscode.window.activeTextEditor) {
-      doc = vscode.window.activeTextEditor.document
+  async function checkDup(param, uri) {
+    param = param || {}
+
+    output.show()
+    output.appendLine(`------------------ Prepare ${param.progressInfo || ''}------------------`)
+
+    let doc
+    if (uri) {
+      try {
+        doc = await vscode.workspace.openTextDocument(uri)
+      } catch (err) {
+        console.error(err)
+        output.appendLine(`📄${uri.fsPath}`)
+        output.appendLine(`❌${err.message}`)
+        if (!param.multipleFiles) {
+          vscode.window.showErrorMessage(`DupChecker: ${err.message}`);
+        }
+        return
+      }
+    } else {
+      if (vscode.window.activeTextEditor) {
+        doc = vscode.window.activeTextEditor.document
+      }
     }
+
     if (!doc) {
       vscode.window.showErrorMessage('DupChecker: the specified document is unavailable!')
       return
     }
 
-    param = param || {}
-    const largeFileLineCount = 100000
-
-    output.show()
-    output.appendLine(`------------------ Prepare ${param.progressInfo || ''}------------------`)
-
     let startLineNumber = 0
     let endLineNumber = doc.lineCount
+    if (vscode.window.activeTextEditor) {
+      const selections = vscode.window.activeTextEditor.selections
+      if (selections.length > 1) {
+        vscode.window.showWarningMessage('Oops! DupChecker cannot work with multiple selections... Please clear the selections or keep just only one!', 'Got it!')
+        return
+      }
+      if (selections.length === 1 && !selections[0].isEmpty) {
+        startLineNumber = selections[0].start.line
+        endLineNumber = selections[0].end.line + 1
+      }
+    }
 
-    const selections = vscode.window.activeTextEditor.selections
-    if (selections.length > 1) {
-      vscode.window.showWarningMessage('Oops! DupChecker cannot work with multiple selections... Please clear the selections or keep just only one!', 'Got it!')
-      return
-    }
-    if (selections.length === 1 && !selections[0].isEmpty) {
-      startLineNumber = selections[0].start.line
-      endLineNumber = selections[0].end.line + 1
-    }
     output.appendLine(`📄${doc.fileName}${startLineNumber !== 0 || endLineNumber !== doc.lineCount ? `:${startLineNumber + 1}-${endLineNumber}` : ''}`)
     output.append('🔍checking duplicates...')
     const totalLineCount = endLineNumber - startLineNumber
+
+    const largeFileLineCount = 100000
     if (totalLineCount >= largeFileLineCount) {
       vscode.window.showInformationMessage(
         `DupChecker may take a while to deal with the large file(${doc.lineCount.toLocaleString()} lines), please be patient ☕`, 'Sure!')
@@ -183,7 +226,7 @@ function activate(context) {
     dupLines.forEach(line => output.appendLine(line))
 
     // stage2: ask user to remove duplicates
-    if (param.skipRemoveStage === true) return
+    if (param.multipleFiles === true) return
     if (dupLines.size > 0) {
       const select = await vscode.window.showInformationMessage(`DupChecker: ${dupLines.size} duplicate value${dupLines.size > 1 ? 's' : ''} found in ${timeCost}s, need remove them?`, 'Yes', 'No')
       if (select === 'Yes') {
