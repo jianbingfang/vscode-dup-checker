@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.1.4 - 2019/10/20
+- Exceptions will not interrupt checking progress in `Check Duplicates (For All Files)` mode.
+- Skip non-textual files in `Check Duplicates (For All Files)` mode.
+
 ## v0.1.3 - 2019/10/19
 - Change default value of config `checkAllFilesInclude` to `**`.
 - Fix bug of "remove duplicates" not working if lose focus on the file.
