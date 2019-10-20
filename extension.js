@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode')
 const _ = require('lodash')
+const isGlob = require("is-glob")
 const stringHash = require("string-hash")
 const { CuckooFilter } = require('cuckoo-filter')
 
@@ -75,7 +76,16 @@ function activate(context) {
     const limit = config.get('checkAllFilesNumLimit', 100)
     const files = await vscode.workspace.findFiles(includes, excludes, limit)
     if (files.length === 0) {
-      return vscode.window.showInformationMessage('DupChecker: no file found in workspace :(');
+      if (!isGlob(includes)) {
+        return vscode.window.showWarningMessage(`DupChecker: no matched file in workspace, your FilesInclude GlobPattern setting looks invalid: ${includes}`, 'Got it!');
+      }
+      if (!isGlob(excludes)) {
+        return vscode.window.showWarningMessage(`DupChecker: no matched file in workspace, your FilesExclude GlobPattern setting looks invalid: ${excludes}`, 'Got it!');
+      }
+      if (limit === 0) {
+        return vscode.window.showWarningMessage(`DupChecker: no matched file in workspace, your FilesNumLimit setting is 0!`, 'Got it!');
+      }
+      return vscode.window.showInformationMessage('DupChecker: no matched file in workspace, please check your FilesInclude and FilesExclude GlobPattern in settings.', 'Sure!');
     }
     if (files.length > 10) {
       const msg = `Check duplicates for all ${files.length} files in workspace?` + (files.length === limit ? `⚠️You have reached max file number limit: ${limit}` : '')
