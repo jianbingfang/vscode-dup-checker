@@ -18,9 +18,11 @@ Commands:
 ### Configurations:
 
 In **Preferences -> settings**:
+
 ![configurations](images/DupChecker-settings.png)
 
 Or in `settings.json`:
+
 ```
 "dupchecker": {
   "trimStart": true,            // trim starting whitespaces in each line, default: true

@@ -71,16 +71,16 @@ function activate(context) {
 
   disposable = vscode.commands.registerCommand('extension.checkDupForAllFiles', async function () {
     const config = vscode.workspace.getConfiguration('dupchecker')
-    const includes = config.get('checkAllFilesInclude', '**')
+    const includes = config.get('checkAllFilesInclude', '') || '**'
     const excludes = config.get('checkAllFilesExclude', '')
     const limit = config.get('checkAllFilesNumLimit', 100)
     const files = await vscode.workspace.findFiles(includes, excludes, limit)
     if (files.length === 0) {
-      if (!isGlob(includes)) {
-        return vscode.window.showWarningMessage(`DupChecker: no matched file in workspace, your FilesInclude GlobPattern setting looks invalid: ${includes}`, 'Got it!');
+      if (includes && !isGlob(includes)) {
+        return vscode.window.showWarningMessage(`DupChecker: no matched file in workspace, your FilesInclude GlobPattern setting looks invalid: "${includes}"`, 'Got it!');
       }
-      if (!isGlob(excludes)) {
-        return vscode.window.showWarningMessage(`DupChecker: no matched file in workspace, your FilesExclude GlobPattern setting looks invalid: ${excludes}`, 'Got it!');
+      if (excludes && !isGlob(excludes)) {
+        return vscode.window.showWarningMessage(`DupChecker: no matched file in workspace, your FilesExclude GlobPattern setting looks invalid: "${excludes}"`, 'Got it!');
       }
       if (limit === 0) {
         return vscode.window.showWarningMessage(`DupChecker: no matched file in workspace, your FilesNumLimit setting is 0!`, 'Got it!');
