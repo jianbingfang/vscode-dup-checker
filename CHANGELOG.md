@@ -1,5 +1,11 @@
 # Change Log
 
+## v0.1.6 - 2019/11/04
+- Fix "Assignment to a constant error" bug in regex check mode.
+
+## v0.1.5 - 2019/10/21
+- Some config default value changes.
+
 ## v0.1.4 - 2019/10/20
 - Exceptions will not interrupt checking progress in `Check Duplicates (For All Files)` mode.
 - Skip non-textual files in `Check Duplicates (For All Files)` mode.
