@@ -54,8 +54,7 @@ function activate(context) {
       prompt: 'RegExp to match and select for each line'
     })
     if (input === undefined) return
-    input = _.trim(input.trim(), '/')
-    const re = new RegExp(input)
+    const re = new RegExp(_.trim(input.trim(), '/'))
     if (!re) return vscode.window.showErrorMessage(`[Invalid Regex]: ${param.regex}`)
     output.clear()
     try {
