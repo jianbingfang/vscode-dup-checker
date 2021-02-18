@@ -52,3 +52,11 @@ Learn more syntax of [GlobPattern](https://code.visualstudio.com/api/references/
 
 ### Check Duplicates With Regex Match
 ![feature X](images/demo3.gif)
+
+## Changelog
+
+See the [Releases section of our GitHub project](https://github.com/jianbingfang/vscode-dup-checker/releases) for changelogs for each release version.
+
+## License
+
+This software is released under the terms of the [MIT license](https://github.com/jianbingfang/vscode-dup-checker/blob/master/LICENSE).
