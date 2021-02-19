@@ -1,5 +1,8 @@
 # Change Log
 
+## v0.1.7 - 2021/02/19
+- Add MIT license.
+
 ## v0.1.6 - 2019/11/04
 - Fix "Assignment to a constant error" bug in regex check mode.
 

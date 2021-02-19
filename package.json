@@ -7,7 +7,8 @@
         "url": "https://github.com/jianbingfang/vscode-dup-checker.git"
     },
     "homepage": "https://github.com/jianbingfang/vscode-dup-checker",
-    "version": "0.1.6",
+    "version": "0.1.7",
+    "license": "MIT",
     "author": {
         "name": "Jianbing Fang",
         "email": "jianbingfang@gmail.com"
