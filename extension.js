@@ -177,6 +177,7 @@ function activate(context) {
     const needTrimEnd = !!config.get('trimEnd', true)
     const needIgnoreCase = !!config.get('ignoreCase', false)
     const needRemoveAllDuplicates = !!config.get('removeAllDuplicates', false)
+    const ignoreLines = _.filter(config.get('ignoreLines', []), v => _.isString(v) && !_.isEmpty(v))
 
     const transformLine = getLineTransformer({
       trimChars: param.trimChars,
@@ -197,7 +198,11 @@ function activate(context) {
     const dupLineNumbers = []
     const firstOccurrenceMap = new Map()
     for (let i = startLineNumber; i < endLineNumber; ++i) {
-      const line = transformLine(doc.lineAt(i).text)
+      const text = doc.lineAt(i).text
+      if (_.some(ignoreLines, li => text.indexOf(li) >= 0)) {
+        continue
+      }
+      const line = transformLine(text)
       if (isDuplicate(line)) {
         dupLines.add(line)
         dupLineNumbers.push(i)
@@ -222,6 +227,7 @@ function activate(context) {
     if (needTrimStart) configInfoList.push('trimStart')
     if (needTrimEnd) configInfoList.push('trimEnd')
     if (needIgnoreCase) configInfoList.push('ignoreCase')
+    if (!_.isEmpty(ignoreLines)) configInfoList.push('ignoreLines')
     if (!_.isEmpty(param.trimChars)) configInfoList.push(`trimChars: ${param.trimChars}`)
     if (!_.isEmpty(param.regex)) configInfoList.push(`regex: /${param.regex}/`)
 

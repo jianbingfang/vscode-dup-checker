@@ -7,7 +7,7 @@
         "url": "https://github.com/jianbingfang/vscode-dup-checker.git"
     },
     "homepage": "https://github.com/jianbingfang/vscode-dup-checker",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "license": "MIT",
     "author": {
         "name": "Jianbing Fang",
@@ -84,6 +84,15 @@
                     "type": "boolean",
                     "default": false,
                     "description": "remove all duplicate lines including the first occurrence if true, default: false"
+                },
+                "dupchecker.ignoreLines": {
+                    "type": "array",
+                    "default": [],
+                    "description": "ignore lines that contain these strings",
+                    "items": {
+                        "type": "string"
+                    },
+                    "scope": "resource"
                 },
                 "dupchecker.checkAllFilesInclude": {
                     "type": "string",
