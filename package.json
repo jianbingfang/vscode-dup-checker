@@ -129,7 +129,7 @@
         "cbor-js": "^0.1.0",
         "cuckoo-filter": "^1.1.4",
         "is-glob": "^4.0.1",
-        "lodash": "^4.17.23",
+        "lodash": "^4.18.1",
         "string-hash": "^1.1.3"
     }
 }
